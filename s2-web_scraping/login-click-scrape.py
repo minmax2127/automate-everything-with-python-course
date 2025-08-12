@@ -1,7 +1,10 @@
 """
 Web Scraper with Automated Login
 --------------------------------
-Logs into a webste and scrapes static and dynamic text from the homepage
+Logs into a webste and scrapes static and dynamic text from the homepage.
+Creates a txt file every 2 seconds that stores the newly scraped dynamic text.
+
+Output filename: <year>-<month>-<day>.<hour>-<mins>-<seconds>.txt
 """
 
 from selenium import webdriver
@@ -13,6 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import os
 import time
+from datetime import datetime
 
 # Configuration
 CHROME_DRIVER_PATH = "C:\\Users\\Maxine\\Documents\\courses\\automate-everything-with-python-course\\s2-web_scraping\\chromedriver.exe"
@@ -69,8 +73,25 @@ def scrape_homepage(driver):
 
     return static_text, dynamic_text
 
+def create_new_outfile(data):
+    # create new file name
+    now = datetime.now()
+    outfile = now.strftime("%Y-%m-%d.%H-%M-%S") + ".txt"
+
+    # create new file and store the data
+    f = open(outfile, "w")
+    f.write(data)
+
+    # close the file
+    f.close()
+
 if __name__ == "__main__":
-    driver = get_driver(WEB_URL)
+    try:
+        driver = get_driver(WEB_URL)
+    except RuntimeError:
+        print('URL Unaccessed')
+        exit()
+    
 
     # Login
     username_input = wait_for_element(driver, By.ID, "id_username").send_keys(USERNAME)
@@ -79,7 +100,9 @@ if __name__ == "__main__":
     # Navigate to homepage
     home_button = wait_for_element(driver, By.XPATH,  "/html/body/nav/div/a").click()
     
-    # scrape the homepage
-    static, dynamic = scrape_homepage(driver)
-    print("Static text: ", static)
-    print("Dynamic text: ", dynamic)
+    # Extract dynamic data every 2 seconds
+    for _ in range(10):
+        static, dynamic = scrape_homepage(driver)
+        create_new_outfile(dynamic)
+
+    print("\n10 Files saved!")
