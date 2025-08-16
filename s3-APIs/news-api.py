@@ -2,7 +2,7 @@
 News API Integration
 ---------------------
 Connects the Python app to the newsapi.org API and gets news data from it based on timeframe and topic assigned
-Example URL: "https://newsapi.org/v2/everything?q=bitcoin&?from=2025-08-16T05:35:34&to=2025-08-01T05:35:34&apiKey=17d5274405dc4cb2b68cbf3d5a30aac4"
+Example URL: "https://newsapi.org/v2/everything?q=bitcoin&?from=2025-08-16T05:35:34&to=2025-08-01T05:35:34&apiKey=" + APIKEY
 """
 
 import requests
