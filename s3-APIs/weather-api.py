@@ -5,17 +5,14 @@ Creates a csv file of the weather data from the OpenWeatherMap.org API
 Forecast URL: https://api.openweathermap.org/data/2.5/forecast?q=Naga&APPID=<apikey>&units=metric
 """
 import os
-import json
 import requests
-import time
-from datetime import datetime
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 WEATHER_KEY = os.environ.get("open_weather_map_api_key")
-OUTFILE = "city_weather.txt"
+OUTFILE = "city_weather.csv"
 
 def get_weather_data(city_name, apikey = WEATHER_KEY):
     """ Calls weather api and returns weather data based on Latitude and Longitude """
