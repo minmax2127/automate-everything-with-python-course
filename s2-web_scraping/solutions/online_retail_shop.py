@@ -17,16 +17,20 @@ from selenium.webdriver.support import expected_conditions as EC
 import os
 import time
 from datetime import datetime
+from dotenv import load_dotenv
 
 
 # Configuration
 CHROME_DRIVER_PATH = "C:\\Users\\Maxine\\Documents\\courses\\automate-everything-with-python-course\\s2-web_scraping\\chromedriver.exe"
-WEB_URL = "http://automated.pythonanywhere.com/login/"
+TITAN_22_URL = "https://titan22.com/account/login?return_url=%2Faccount"
+
+load_dotenv()
 
 # Demo Credentials (stored in environment variables or fallback for demo)
-USERNAME = os.getenv("WEB_SCRAPER_USER", "automated")
-PASSWORD = os.getenv("WEB_SCRAPER_PASSWORD", "automatedautomated")
-
+CREDENTIALS = {
+    "email": os.environ.get("secretEmail"), 
+    "password": os.environ.get("secretPassword")
+}   
 
 CHROME_ARGUMENTS = [
     "disable-infobars", 
@@ -57,54 +61,11 @@ def wait_for_element(driver, by, value, timeout = 10):
         EC.presence_of_element_located((by, value))
     )
 
-def get_element_text(driver, by, value):
-    """ Returns the extracted text from a website tag """
-    element = wait_for_element(driver, by, value)
-    return element.text
-
-def scrape_homepage(driver):
-    """ Scrapes the Homepage for the static and dynamic value"""
-    time.sleep(2)
-
-    static_text = get_element_text(driver, By.XPATH, "/html/body/div[1]/div/h1[1]")
-    dynamic_text = get_element_text(driver, By.XPATH, "/html/body/div[1]/div/h1[2]")
-
-    # filter dynamic text
-    dynamic_text = dynamic_text.split(': ', 1)[1]
-
-
-    return static_text, dynamic_text
-
-def create_new_outfile(data):
-    # create new file name
-    now = datetime.now()
-    outfile = now.strftime("%Y-%m-%d.%H-%M-%S") + ".txt"
-
-    # create new file and store the data
-    f = open(outfile, "w")
-    f.write(data)
-
-    # close the file
-    f.close()
-
 if __name__ == "__main__":
-    try:
-        driver = get_driver(WEB_URL)
-    except RuntimeError:
-        print('URL Unaccessed')
-        exit()
-    
-
-    # Login
-    username_input = wait_for_element(driver, By.ID, "id_username").send_keys(USERNAME)
-    password_input = wait_for_element(driver, By.ID, "id_password").send_keys(PASSWORD + Keys.RETURN)
-    
-    # Navigate to homepage
-    home_button = wait_for_element(driver, By.XPATH,  "/html/body/nav/div/a").click()
-    
-    # Extract dynamic data every 2 seconds
-    for _ in range(10):
-        static, dynamic = scrape_homepage(driver)
-        create_new_outfile(dynamic)
-
-    print("\n10 Files saved!")
+    driver = get_driver(TITAN_22_URL)
+    driver.find_element(by = By.ID, value = "CustomerEmail").send_keys(CREDENTIALS["email"])
+    time.sleep(2)
+    driver.find_element(by = By.ID, value = "CustomerPassword").send_keys(CREDENTIALS["password"] + Keys.RETURN)
+    time.sleep(2)
+    driver.find_element(by = By.XPATH, value = '//*[@id="shopify-section-footer"]/section/div/div[1]/div[1]/div[1]/nav/ul/li[1]/a').click()
+    print(driver.current_url)
