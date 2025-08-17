@@ -3,120 +3,114 @@ Quiz on Countries
 -----------------
 Uses the scraped country data to create a simple quiz on countries
 
-DEMO
-----
-Enter Player Name: Maxine
-
-WELCOME MAXINE!
-
-Lives: ❤️❤️❤️
-Question #1: Country that capital of "Victoria"
-a. Sudan
-b. Philippines
-c. Seychelles
-
-Answer: a
-
-You're wrong!
-Lives: ❤️❤️
-Question #1: Country that capital of "Bangkok"
-a. Turkey
-b. Taiwan
-c. Vatican City
-
-Answer: b
-
-You're correct!
-
-- Player starts with 0 points
-- For each correct answer, player gets 50 points
+Features:
+- Gameplay
+- Saves data for offline game database
 """
 
 import os
 import time
 from bs4 import BeautifulSoup
 import requests
-import json
 import random
-
-countries_json = {
-    "countries": [
-        {
-            "name": "Andorra", 
-            "capital": "Andorra la Vella", 
-            "population": 84000, 
-            "area": 468.0
-        }, 
-        {
-            "name": "United Arab Emirates", 
-            "capital": "Abu Dhabi", 
-            "population": 4975593, 
-            "area": 82880.0
-        }, 
-        {
-            "name": "Afghanistan", 
-            "capital": "Kabul", 
-            "population": 29121286, 
-            "area": 647500.0
-        },
-        {
-            "name": "Antigua and Barbuda", 
-            "capital": "St. John's", 
-            "population": 86754, 
-            "area": 443.0
-        },
-        {
-            "name": "Anguilla", 
-            "capital": "The Valley", 
-            "population": 13254, 
-            "area": 102.0
-        },
-        {
-            "name": "Albania", 
-            "capital": "Tirana", 
-            "population": 2986952, 
-            "area": 28748.0
-        }
-    ]
-}
+import json
 
 COUNTRIES_URL = "https://www.scrapethissite.com/pages/simple/"
+SAVED_COUNTRY_DATA_FILEPATH = "countries.csv"
 
-def clear_screen(delay = 0.2):
-    """ Clears the terminal screen after a delay """
-    time.sleep(delay)
-    os.system('cls')
+class Frontend:
+    """ Handles the display-related factors of the game"""
 
-def press_enter():
-    """ Requires player to press enter """
-    enter = input("\n\nPRESS [ENTER] to proceed...")
+    def clear_screen(self, delay = 0.2):
+        """ Clears the terminal screen after a delay """
+        time.sleep(delay)
+        os.system('cls')
 
+    def press_enter(self, ):
+        """ Requires player to press enter """
+        enter = input("\n\nPRESS [ENTER] to proceed...")
 
-def ask_question(question, choices = []):
-    """ Asks a given question to the player and ensures that their answer is within the choices """
-    choices = [(lambda x: x.lower())(choice) for choice in choices]
-    while True:
-        answer = input(question)
-        clear_screen()
-        # if no choices given, any user input is acceptable
-        if len(choices) == 0:
-            return answer
-        else:
-            # if answer is in the choices, accept user input. else, repeat question
-            if answer.lower() in choices:
+    def ask_question(self, question, choices = []):
+        """ Asks a given question to the player and ensures that their answer is within the choices """
+        choices = [(lambda x: x.lower())(choice) for choice in choices]
+        while True:
+            answer = input(question)
+            print()
+            # if no choices given, any user input is acceptable
+            if len(choices) == 0:
                 return answer
             else:
-                print("Invalid answer!\n")
+                # if answer is in the choices, accept user input. else, repeat question
+                if answer.lower() in choices:
+                    return answer
+                else:
+                    print("Invalid answer!\n")
 
-class Data:
-    """ Handles the backend of the game, which is all about the retrieval of data from the url to webscrape"""
+    def display_choices(self, choices):
+        """ Show the choices """
+        for key, value in choices.items():
+            print(f"{key}. {value}")
+
+class Backend:
+    """ Handles the backend of the game, which is all about the retrieval of data from the url to webscrape """
     def __init__(self, url):
         self.url = url
         self.countries = self.get_countries_data(self.url)
 
     def get_countries_data(self, url):
         """ Returns the list of countries along with their details """
-        content = requests.get(url).text
+        # check if country data has been saved before
+        if os.path.exists(SAVED_COUNTRY_DATA_FILEPATH):
+            return self.load_saved_country_data(SAVED_COUNTRY_DATA_FILEPATH)
+        else:
+            return self.scrape_country_data(url)
+    
+    def load_saved_country_data(self, filepath):
+        """ Returns the json data of the country data stored in the csv """
+        # store in a list
+        country_list = []
+
+        # open the file
+        f = open(filepath, "r", encoding="utf-8")
+
+        # read each row
+        while(f.readline()):
+            # create list of the data
+            country_data = f.readline().split(",")[:4]
+
+            # clean data
+            country_data = [(lambda x: x.strip())(el) for el in country_data]
+            if len(country_data) != 4:
+                continue
+            
+            # create json and append it to the list
+            country_json = {
+                "name": str(country_data[0]), 
+                "capital": str(country_data[1]), 
+                "population": str(country_data[2]), 
+                "area": str(country_data[3]), 
+            }
+            country_list.append(country_json)
+
+        # close file
+        f.close()
+
+        return country_list
+
+
+    def scrape_country_data(self, url):
+        """ Scrapes the website for the data of the countries """
+        try:
+            # makes a request to the url
+            r = requests.get(url, timeout=3)
+            r.raise_for_status()
+            content = r.text
+        except Exception as e:
+            # returns error message when HTTPError occurs. Exits program.  
+            print(f"Error occurred!: {e}")
+            exit()
+
+        # creates soup for the html extracted
         soup = BeautifulSoup(content, "html.parser")
         countries = list(soup.find_all("div", class_="col-md-4 country"))
 
@@ -139,7 +133,41 @@ class Data:
             }
             country_list.append(data)
 
+        self.save_country_data(country_list)
+
         return country_list
+    
+    def append_csv_row(self, f, lst):
+        """ Creates a new row given a list and appends it to a csv file """
+        for item in lst:
+            item = str(item)
+            if item:
+                f.write(item)
+            else:
+                f.write("None")
+            f.write(", ")
+        f.write("\n")
+
+    def save_country_data(self, country_list, filepath = SAVED_COUNTRY_DATA_FILEPATH):
+        """ Saves scraped country data to a csv file """
+        # create a file
+        f = open(SAVED_COUNTRY_DATA_FILEPATH, "w", encoding="utf-8")
+
+        # write header
+        headers = ["Name", "Capital", "Population", "Area"]
+        self.append_csv_row(f, headers)
+
+        # create row for each country
+        for i, country in enumerate(country_list):
+            try:
+                country_data = [country["name"], country["capital"], country["population"], country["area"]]
+                self.append_csv_row(f, country_data)
+            except Exception as e:
+                print("Error at: ", e, i, country_list[i])
+        
+        # close file
+        f.close()
+
     
     def formulate_question(self, country):
         """ Returns formulated question, answer, and choices """
@@ -165,88 +193,59 @@ class Data:
     
     def validate_answer(self, player_answer, answer, choices):
         """ Checks if the player answereed correctly or not """
-        print("player_answer: ", player_answer)
-        print("answer: ", answer)
-        print("choices: ", choices)
+        print(f"Player: {player_answer}, Answer: {answer}")
+        is_correct = choices[player_answer] == answer
+        
+        if is_correct:
+            print("Correct!")
+        else:
+            print(f"Wrong! Correct answer is {answer}.")
 
-        return True
+        return is_correct
+
+
 
 if __name__ == '__main__':
-    """
-    name = ask_question("Enter name: ")
-    screen = Screens(name, lives = 3)
-    screen.Welcome_Screen()
-    """
-    # game data
-    round_no = 0
-    lives_left = 3
+    # create instances of the classes
+    frontend = Frontend()
+    backend = Backend(COUNTRIES_URL)
 
-    # fetch data
-    data = Data(COUNTRIES_URL)
+    # game data
+    round_no = 1
+    lives_left = 3
+    points = 0
 
     # game loop
     while lives_left != 0:
-        # round question and answer
-        country = random.choice(data.countries)
-        question, answer, choices = data.formulate_question(country)
+        # get question and answer
+        country = random.choice(backend.countries)
+        question, answer, choices = backend.formulate_question(country)
+
+        # display lives
+        print(f"\nROUND # {round_no}")
+        print("\nLives: ", "❤️" * lives_left)
+        print(f"Points: {points}")
 
         # ask player the question
-        player_answer = ask_question(question + ": ", ["a", "b", "c"])
-        is_correct = data.validate_answer(player_answer, answer, choices)
+        print(f"\n{question}")
+        frontend.display_choices(choices)
+        player_answer = frontend.ask_question("Your answer: ", ["a", "b", "c"]).lower()
+        
+        # check if the answer is correct
+        is_correct = backend.validate_answer(player_answer, answer, choices)
+        
+        # lose a life if answer is incorrect
+        if not is_correct:
+            lives_left -= 1
+        else:
+            points += 50
 
+        # increment another round
+        if lives_left != 0:
+            round_no += 1
 
-        break
+        frontend.clear_screen(1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-
-class Screens:
-    """ A class of the screens that would be displayed """
-    def __init__(self, name, lives = 0):
-        self.name = name
-        self.lives = lives
-
-    def Welcome_Screen(self):
-        # display welcome message and instructions
-        print(f"Welcome, {name}!")
-        print("\nWe are happy to have you. Here are the mechanics of the game:")
-        print("\nYou will be given 3 lives, and you must make the most out of it. \nIn this game, you need to go through a series of questions, wherein you need to match the country with its capital. \nDon't worry, there will be choices of course!")
-        print("\n\nGOODLUCK, BABE!")
-        press_enter()
-
-    def Round_Screen(self, round_no):
-        # display for each round
-        # must have: Lives, Round no, Question, choices, input answer
-        pass
-
-        '''
+    # game over
+    print(f"GAME OVER! You got {points}.")
+    
