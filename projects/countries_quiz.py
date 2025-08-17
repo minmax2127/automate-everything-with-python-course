@@ -70,30 +70,24 @@ class Backend:
         # store in a list
         country_list = []
 
-        # open the file
-        f = open(filepath, "r", encoding="utf-8")
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                # create list of the data
+                country_data = f.readline().split(",")[:4]
 
-        # read each row
-        while(f.readline()):
-            # create list of the data
-            country_data = f.readline().split(",")[:4]
-
-            # clean data
-            country_data = [(lambda x: x.strip())(el) for el in country_data]
-            if len(country_data) != 4:
-                continue
-            
-            # create json and append it to the list
-            country_json = {
-                "name": str(country_data[0]), 
-                "capital": str(country_data[1]), 
-                "population": str(country_data[2]), 
-                "area": str(country_data[3]), 
-            }
-            country_list.append(country_json)
-
-        # close file
-        f.close()
+                # clean data
+                country_data = [(lambda x: x.strip())(el) for el in country_data]
+                if len(country_data) != 4:
+                    continue
+                
+                # create json and append it to the list
+                country_json = {
+                    "name": str(country_data[0]), 
+                    "capital": str(country_data[1]), 
+                    "population": str(country_data[2]), 
+                    "area": str(country_data[3]), 
+                }
+                country_list.append(country_json)
 
         return country_list
 
